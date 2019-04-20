@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Spring-Mass System - Joanna Sumner</title>
+	<style>
+		*{ padding: 0; margin: 0; }
+		canvas { display: block; margin: 10px auto; }
+		
+		.pageElements {
+			display: flex;
+			flex-direction: row;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.userInterface {
+			display: flex;
+  			flex-direction: column;
+  			justify-content: center;
+			align-items: center;
+		}
+
+		.userInterface {
+            width:900px;
+            margin:5px auto;
+        }
+        .userInterface > div {
+            border-bottom:1px solid #EEE;
+            padding:5px 0;
+        }
+        .userInterface label {
+            width:200px;
+            display:inline-block;
+        }
+       .userInterface input {
+            vertical-align:middle;
+        }
+
+        .sliders {
+			display: flex;
+  			flex-direction: row;
+  			justify-content: center;
+			align-items: center;
+		}
+
+		.slidersGroup1 {
+			display: flex;
+  			flex-direction: column;
+  			justify-content: center;
+			align-items: center;
+		}
+
+		.slidersGroup1 > div {
+            border-bottom:1px solid #EEE;
+            padding:5px 0;
+        }
+
+		.slidersGroup2 {
+			display: flex;
+  			flex-direction: column;
+  			justify-content: center;
+			align-items: center;
+		}
+
+		.slidersGroup2 > div {
+            border-bottom:1px solid #EEE;
+            padding:5px 0;
+        }
+
+        .chartSettings {
+			display: flex;
+  			flex-direction: row;
+  			justify-content: center;
+			align-items: center;
+		}
+
+		.button {
+        	padding:5px;
+        }
+
+	</style>
+
+	<script src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+
+</head>
+<body>
+
+<div class="pageElements">
+
+	<div class="userInterface">
+
+			<div>
+				<h3 style="text-align:center;">MATH 4400 Spring-Mass System Simulation by Joanna Sumner</h3>
+			</div>
+
+			<div class = "sliders">
+
+				<h4 style="text-align:center; flex-basis: 175px">Change parameters to see the effect instantly.
+				<br>Top ball is Ball 1.
+				<br>Bottom ball is Ball 2.</h4>
+
+				<div class = "sliderGroup1">	
+					
+					<div>
+		                <label>Ball 1 Mass (<span id="m1_slider_label">0.5</span> kg)</label> 
+		                <input id="m1_slider" type="range" min=0.1 max=5 value=0.5 step=0.1></input>
+		            </div>
+
+		            <div>
+		                <label>Ball 1 Damping (<span id="d1_slider_label">0.5</span> kg/s)</label> 
+		                <input id="d1_slider" type="range" min=0.1 max=5 value=0.5 step=0.1></input>
+		            </div>
+
+		            <div>
+		                <label>Spring 1 Stiffness (<span id="s1_slider_label">10</span> kg/s<sup>2</sup>)</label> 
+		                <input id="s1_slider" type="range" min=1 max=100 value=10></input>
+		            </div>
+		            
+		        </div>
+
+		        <div class = "sliderGroup2">
+
+		            <div>
+		                <label>Ball 2 Mass (<span id="m2_slider_label">0.5</span> kg)</label> 
+		                <input id="m2_slider" type="range" min=0.1 max=5 value=0.5 step=0.1></input>
+		            </div>
+
+		            <div>
+		                <label>Ball 2 Damping (<span id="d2_slider_label">0.5</span> kg/s)</label> 
+		                <input id="d2_slider" type="range" min=0.1 max=5 value=0.5 step=0.1></input>
+		            </div>
+
+		            <div>
+		                <label>Spring 2 Stiffness (<span id="s2_slider_label">10</span> kg/s<sup>2</sup>)</label> 
+		                <input id="s2_slider" type="range" min=1 max=100 value=10></input>
+		            </div>       
+		            
+		        </div>
+
+		    </div>
+
+            <div>
+				<h4 style="text-align:center;">Apply Force: Click on a ball, dragging your mouse to set the ball's position and apply the springs' restoring forces.
+				<br>(Balls must be dragged individually and can not be dragged over each other.)</h4>
+			</div>
+
+			<div class="chartSettings">
+
+				<div>
+					<h4 style="text-align:center; margin-right: 15px;">Plot Position: Charts will plot positions and maximal amplitudes once initial displacement is provided.
+					<br>Use reset button to clear chart data and then provide an initial displacement to begin plotting again.
+					<br>To zoom in, click on chart and drag your mouse to the left.</h4>
+				</div>
+
+				<button id="resetButton" class="button">Reset</button>
+
+			</div>
+
+			<div id="ball1Chart" style="height: 175px; width: 800px;">
+  			</div>
+
+  			<div id="ball2Chart" style="height: 175px; width: 800px;">
+  			</div>
+
+		</div>
+
+		<div style="flex-basis: 500px">
+        	<canvas id="myCanvas" width="400" height="560" style="background: #eee; border: 1px solid black;"></canvas>
+        </div>
+		
+</div>
+
+<script>
+	
+	/*
+	Author: Joanna Sumner
+	Course Assignment: MATH 4400 Project 2: Milestone 3
+	Description: This program simulates two balls connected via a vertical spring with the top ball
+	also attached via a vertical spring to the ceiling. The ball's oscillations
+	are simulated according to Hooke's Law with damping included, but no gravity.
+	Each ball's mass and damping constant, as well as each spring's stiffness, can be adjusted by the user using onscreen sliders.
+	Forces can be applied independently to each ball. To do so, the user can click anywhere on a ball
+	and drag their mouse either up or down before releasing. The ball's position will be reset to the height of the
+	mouse release so that unless the springs are equilibrium length, the balls will experience force and begin oscillating
+	until the springs return to equilibrium length.
+	The displacement of each ball from equilibrium is constantly recorded and plotted on a corresponding graph.
+	The graph's begin plotting data after an initial displacement and can be reset to begin a new plot using the reset button.
+	Sources are listed in the accompanying program documentation PDF.
+	*/
+
+	//Variable & Parameter Setup: canvas and animation timing
+	var canvas = document.getElementById("myCanvas");
+	var ctx = canvas.getContext("2d");
+
+	const frameRate = 1/60;					//in seconds
+	const frameDelay = frameRate * 1000;	//in milliseconds
+	const dt = frameRate;					//Time interval
+
+	//Variable and Parameter Setup: Ball and spring
+
+	//All motion occurs in the y direction with x position fixed for ball and spring
+	const xPosition = canvas.width/2;
+
+	//Initializing/Default Values for Springs
+	const springStiffness = 10; //Hooke's Constant in kg/s^2
+	const springLength = canvas.height/4-40; //in pixels, 1 pixel = 1 cm
+											 //-40 accounts for ball radii
+											 //== 100 px (cm)
+
+	//Initializing values for Balls
+	const ballColor = 'rgb(0,0,255)';	//blue
+	const ballMass = 0.5;		// in kg
+	const ballRadius = 20;		// in cm (1 px = 1 cm)
+	const ballDamping = 0.5;    //Damping constant in kg/s;
+
+	//The balls and springs are initiated to the equilibrium configuration
+	const initialBallPosition1 = springLength + ballRadius;
+	const initialBallPosition2 = initialBallPosition1 + springLength + ballRadius * 2;
+	const initialVelocity = 0;
+	const initialSpringTopPosition1 = 0;
+	const initialSpringTopPosition2 = initialBallPosition1 + ballRadius;
+
+	//Variables for Ball Position Chart Data
+	var initialForce = false;	//Track whether user provided initial displacement
+	var chartTime = 0;			//Track time since initial displacement provided
+	var ball1Position = [];		//Array for (time, position) points added each frame
+	var ball1MaxAmpUp = 0;		//Track maximum positive displacement from equilibrium
+	var ball1MaxAmpDown = 0;	//Track maximum negative displacement from equilbrium
+	var ball2Position = [];
+	var ball2MaxAmpUp = 0;
+	var ball2MaxAmpDown = 0;
+
+	//Spring Class: Each object has necessary spring attributes (topPosition, length, and stiffness).
+	// Each object can utilize the draw function.
+
+	//Spring Constructor
+	//Springs are initialized with default stiffness and length values
+	//The position of the spring top is given at initialization
+	function Spring(topPosition)
+	{
+		this.topPosition = topPosition;
+		this.length = springLength;
+		this.stiffness = springStiffness;
+	}
+
+	//Springs are drawn from top (ceiling or ball) to bottom (ball) using a zig zag black line
+	//Zig zag is stretched or compressed based on whether spring is stretched or compressed from equilibrium length
+	Spring.prototype.draw = function(bottomPosition)
+	{
+		//Ratio of current spring length to equilibrium length determines how stretched/compressed the spring is
+		var lengthRatio = (bottomPosition - this.topPosition)/this.length;
+
+		//Repeatedly draw diagonal lines right and downward, then left and downward for length of spring
+		//Height of each diagonal line depends on the lengthRatio
+		for (var y = this.topPosition; y < bottomPosition; y = y + 20 * lengthRatio)
+    	{
+	        ctx.strokeStyle = 'black';
+	        ctx.beginPath();
+	        ctx.moveTo(xPosition - 7, y);
+	        ctx.lineTo(xPosition + 7, y + 10 * lengthRatio);
+	        ctx.lineTo(xPosition - 7, y + 20 * lengthRatio);
+	        ctx.stroke();
+	        ctx.closePath();
+    	}
+	}
+
+	//Ball Class: Each object has necessary parameters (color, mass, radius, damping) and variables (position, velocity)
+	// Each object can utilize the draw function.
+
+	//Ball constructor
+	//Balls are initialized with default color, mass, radius, damping, and velocity
+	//Position for equilibrium configuration is specified for each ball at initialization
+	function Ball(position)
+	{
+		this.color = ballColor;
+		this.mass = ballMass;
+		this.radius = ballRadius;
+		this.damping = ballDamping;
+		this.position = position;
+		this.velocity = initialVelocity;
+	}
+
+	//Draw function displays ball at ball's current stored position
+	Ball.prototype.draw = function ()
+	{
+		ctx.beginPath();
+		ctx.arc(xPosition, this.position, this.radius, 0, Math.PI*2);
+		ctx.fillStyle = this.color;
+		ctx.fill();
+		ctx.closePath();
+	}
+
+	//Parameter Sliders: Allow users to individually adjust each ball's mass and damping constant and each spring's stiffness
+
+	//Ball Mass Sliders allows user to change mass of either ball during program runtime
+    //Mass can range from 0.1 to 5 kg; starting value is 0.5 kg
+    document.getElementById('m1_slider').onchange = function() {
+        this.innerHTML = this.value;
+        ball1.mass = parseFloat(this.value);
+        document.getElementById('m1_slider_label').innerHTML = ball1.mass;
+    };
+    document.getElementById('m2_slider').onchange = function() {
+        this.innerHTML = this.value;
+        ball2.mass = parseFloat(this.value);
+        document.getElementById('m2_slider_label').innerHTML = ball2.mass;
+    };
+
+    //Ball Damping Sliders allows user to change damping of either ball during program runtime
+	//Damping can range from 0.1 to 5 kg/s; starting value is 0.5 kg/s
+    document.getElementById('d1_slider').onchange = function() {
+        this.innerHTML = this.value;
+        ball1.damping = parseFloat(this.value);
+        document.getElementById('d1_slider_label').innerHTML = ball1.damping;
+    };
+	document.getElementById('d2_slider').onchange = function() {
+        this.innerHTML = this.value;
+        ball2.damping = parseFloat(this.value);
+        document.getElementById('d2_slider_label').innerHTML = ball2.damping;
+    };
+
+	//Spring Stiffness Sliders allows user to change stiffness of either spring during program runtime
+	//Stiffness can range from 1 to 100 kg/s^2; starting value is 10 kg/s^2
+	document.getElementById('s1_slider').onchange = function() {
+        this.innerHTML = this.value;
+        spring1.stiffness = parseInt(this.value);
+        document.getElementById('s1_slider_label').innerHTML = spring1.stiffness;
+    };
+    document.getElementById('s2_slider').onchange = function() {
+        this.innerHTML = this.value;
+        spring2.stiffness = parseInt(this.value);
+        document.getElementById('s2_slider_label').innerHTML = spring2.stiffness;
+    };
+
+    //Reset button to enable user to reset ball position charts
+    //Time and force tracking variables are reset and position and amplitude data for each ball is cleared
+    //Chart will begin plotting with fresh data once an intial displacement is provided by user
+    document.getElementById('resetButton').onclick = function ()
+	{
+		initialForce = false;
+		chartTime = 0;
+		ball1Position.length = 0;
+		ball1MaxAmpUp = 0;
+		ball1MaxAmpDown = 0;
+		ball2Position.length = 0;
+		ball2MaxAmpUp = 0;
+		ball2MaxAmpDown = 0;	
+	}
+
+	//Setup Mouse Functions: Enable user to apply forces independently to each ball
+
+	//Program constantly "listens" for a mouse click. If the mouse left button is clicked over one of the balls,
+	//the simulation of the system’s movement is paused and the simulation tracks the mouse drag up or down,
+	// drawing an appropriate line. When the mouse button is released, the ball that was selected is moved to that position.
+	// Checks are made to ensure the new ball position does not shorten the spring too much or cause the ball to disappear into the floor.
+	// As soon as the mouse button is released the normal simulation resumes to display the results of the ball's new position
+	// and any spring displacement and associated force it causes.
+
+	//Mouse variable to hold mouse position and track whether clicked down and if so, over which ball
+	var mouse = {x: 0, y: 0, isDown: false, overBall: 0};
+
+	//Set mouse variable to position of mouse inside canvas
+	function getMousePosition(evt)
+	{
+			mouse.x = evt.pageX - canvas.offsetLeft;
+			mouse.y = evt.pageY - canvas.offsetTop;
+	}
+
+	//When left mouse button is pressed, determine which ball the moused is clicked over and set mouse variables
+	// isDown and overBall appropriately. If mouse was not clicked over a ball, function will change nothing.
+	var mouseDown = function(evt)
+	{
+		//If the left mouse button was pressed, check mouse position relative to balls
+		if(evt.which == 1)
+		{
+			getMousePosition(evt);
+	
+			//If mouse is over ball1, set isDown to true and overBall to 1
+			if( ( mouse.x >= (xPosition-ballRadius) && mouse.x <= (xPosition+ballRadius) ) &&
+				( (mouse.y >= ball1.position-ballRadius) && (mouse.y <= ball1.position+ballRadius) ) )
+			{
+				mouse.isDown = true;
+				mouse.overBall = 1;
+			}
+			//Else if mouse is over ball2, set isDown to true and overBall to 2
+			else if( ( mouse.x >= (xPosition-ballRadius) && mouse.x <= (xPosition+ballRadius) ) &&
+				( (mouse.y >= ball2.position-ballRadius) && (mouse.y <= ball2.position+ballRadius) ) )
+			{
+				mouse.isDown = true;
+				mouse.overBall = 2;
+			}
+		}
+	}
+
+	//When left mouse button is released, determine the position of the mouse release which will become
+	//the new position of the selected ball (specified by overBall mouse attribute).
+	//Check new position to ensure it does not cause springs to compress to less than 10 cm, cause balls to overlap,
+	// or cause ball2 to disappear into the floor. Reset position if necessary and then set appropriate ball to new position.
+	//Reset mouse attributes isDown to false and overBall to 0 to allow function to listen for new clicks/position changes.
+	//Set initialForce to true so after first displacement provided by user, chart will begin plotting position data 
+	//If mouse was released after a mouse click that was not originally over a ball, nothing will happen.
+	var mouseUp = function(evt)
+	{
+		//If mouse left button is released, reset the position of the ball appropiately 
+		if(evt.which == 1)
+		{
+			mouse.isDown = false;
+
+			//Idenitfy new position for ball
+			var newPos = mouse.y;
+
+			//If ball 1 was selected, reset position appropriately. Check first if position causes spring 1 or 2 to compress too much.
+			if(mouse.overBall == 1)
+			{
+				//Reset position if necessary to ensure new position doesn't cause top spring to shorten to less than 10 cm
+				if(newPos < ballRadius + 10)						
+				{
+					newPos = ballRadius + 10;
+				}
+
+				//Reset position if necessary to ensure new position doesn't cause bottom spring in between balls to shorten to less than 10 cm
+				if(newPos > ball2.position - ballRadius*2 - 10)
+				{
+					newPos = ball2.position - ballRadius*2 - 10;
+				}
+
+				//Set ball 1 to new position and topPosition of spring 2 appropriately
+				ball1.position = newPos;
+				spring2.topPosition = ball1.position + ballRadius;
+
+				//Set initialForce to true so after first displacement provided by user, chart will begin plotting position data 
+				initialForce = true;
+			}
+			//Else if ball 2 was selected, reset position appropriately. Check first if position causes spring 2 to compress too much
+			//or causes ball 2 to disappear into the floor.
+			else if(mouse.overBall == 2)
+			{
+				//Reset position if necessary to ensure new position doesn't cause ball to partially disappear into floor
+				if(newPos > canvas.height-ballRadius)
+				{
+					newPos = canvas.height-ballRadius;
+				}
+
+				//Reset position if necessary to ensure new position doesn't cause bottom spring in between balls to shorten to less than 10 cm
+				if(newPos < ball1.position + ballRadius*2 + 10)
+				{
+					newPos = ball1.position + ballRadius*2 + 10;
+				}
+
+				//Set ball 2 to new position
+				ball2.position = newPos;
+
+				//Set initialForce to true so after first displacement provided by user, chart will begin plotting position data 
+				initialForce = true;
+			}
+			//Else if mouse click was not over a ball, nothing happens.
+
+			//Reset overBall attribute to ready program for another position change
+			mouse.overBall = 0;
+		}
+	}
+
+	//Program constantly monitors mouse movement and mouse clicks, executing functions appropriately to apply a force to a ball
+	canvas.onmousemove = getMousePosition;
+	canvas.onmousedown = mouseDown;
+	canvas.onmouseup = mouseUp;
+
+	//Main Simulation Program
+
+	//Initialize two balls and two springs with positions corresponding to equilibrium configuration
+	var ball1 = new Ball(initialBallPosition1);
+	var ball2 = new Ball(initialBallPosition2);
+	var spring1 = new Spring(initialSpringTopPosition1);
+	var spring2 = new Spring(initialSpringTopPosition2);
+
+	//Main simulation function exectuted during each frame every frameDelay milliseconds
+	//During a normal simulation frame, the spring’s displacements are calculated, and the spring force
+	//and damping force exerted on each ball is calculated. This allows finding each ball’s acceleration,
+	//from which can be determined their final velocity and their final position. Final checks are made to ensure
+	//the balls’ positions do not compress the springs to < 10 cm or cause the ball to disappear into the floor.
+	//The positions of each ball are then pushed to an unique array for each ball which tracks each ball’s position
+	// using one point per frame.Each ball’s position is checked against the two variables for each ball which track
+	// the ball’s maximum displacement up or down from equilibrium. If necessary, the max displacements are updated and
+	//the corresponding value of the trend line on the chart is updated. Springs are then drawn, then the balls are drawn,
+	//and finally the charts are rendered.
+	//At all times, the program listens for a mouse click. If the mouse left button is clicked over one of the balls,
+	//the simulation of the system’s movement (described above) is paused and the simulation tracks the mouse drag up or down,
+	//drawing an appropriate line. When the mouse button is released, the ball that was selected is moved to that position.
+	//As soon as the mouse button is released the normal simulation resumes to display the results of the applied force.
+	function simulateSystem()
+	{
+		//If mouse is not clicked down (in which case, movement is froznen until new position for ball is chosen),
+		//Calculate new position for balls based on acceleration provided by spring and damping forces and based on initial velocity
+		if( ! mouse.isDown)
+		{
+			//Calculate displacement (delta) for each spring from it's equilibrium length: (current)-equilibrium
+			var delta1 = (ball1.position-ballRadius-spring1.topPosition)-spring1.length;
+			var delta2 = (ball2.position-ballRadius-spring2.topPosition)-spring2.length;
+
+			//Calculate the force experienced by each ball from the springs dependent on stiffness and displacement
+			//ball1 is acted upon by forces from spring1 and spring2 due to their displacement
+			//ball2 is acted upon by the force from spring2 due to its displacement
+			var springForce1 = -1 * (spring1.stiffness + spring2.stiffness)*delta1 + spring2.stiffness * delta2;
+			var springForce2 = spring2.stiffness*(delta1-delta2);
+
+			//Calculate damping force which acts opposite velocity and depends on damping coefficient and velocity
+			var dampingForce1 = -1 * ball1.damping * ball1.velocity;
+			var dampingForce2 = -1 * ball2.damping * ball2.velocity;
+
+			//Calculate net acceleration for each ball from sum of spring and damping forces divided by mass
+			var acceleration1 = (springForce1 + dampingForce1)/ball1.mass;
+			var acceleration2 = (springForce2 + dampingForce2)/ball2.mass;
+
+			//Calculate velocities from initial velocity and acceleration
+			ball1.velocity = ball1.velocity + acceleration1*dt;
+			ball2.velocity = ball2.velocity + acceleration2*dt;
+
+			//Calculate final positions for balls from intial position and velocity
+			ball1.position = ball1.position + ball1.velocity*dt;
+			ball2.position = ball2.position + ball2.velocity*dt;
+
+			//Check if spring1 is shortened to less than 10 cm
+			//If spring becomes too short, reset positions so spring is 10 cm 
+			if(ball1.position < ballRadius + 10)
+			{
+				ball1.position = ballRadius + 10;
+			}
+			//Check if spring2 is shortened to less than 10 cm (also checking if ball's overlap)
+			//If spring2 becomes too short, reset positions so spring is 10 cm
+			if(ball2.position < ball1.position + ballRadius*2 + 10)
+			{
+				ball2.position = ball1.position + ballRadius*2 + 10;
+			}
+			//Check if ball2 disappears into the floor
+			//If so, reset to be just touching floor
+			if(ball2.position > canvas.height-ballRadius)
+			{
+				ball2.position = canvas.height-ballRadius;
+			}
+
+			//Update topPosition of spring2
+			spring2.topPosition = ball1.position + ballRadius;
+
+
+			//Once initial force is provided begin plotting position data
+			//Add graph point (time, position) to each ball's position data array and update maximal amplitude lines if necessary
+			if(initialForce == true)
+			{
+				chartTime++;
+			
+				//Find displacement from equilibrium using position (+ displacement is up, - displacement is down)
+				chartPositionBall1 = initialBallPosition1-ball1.position;
+				chartPositionBall2 = initialBallPosition2-ball2.position;
+
+				//Add point to data array: time in seconds (chartTime/60 since frames are 60 per second)
+				// and displacement from equilibrium in cm (pixels)
+				ball1Position.push({x: chartTime/60, y: chartPositionBall1});
+				ball2Position.push({x: chartTime/60, y: chartPositionBall2});
+
+				//Chart maintains each ball's positive and negative maximal amplitudes using trend lines
+				//Check if ball's new position is a new max; if so, update trendline value and label
+				if(chartPositionBall1 > 0 && chartPositionBall1 > ball1MaxAmpUp)
+				{
+					ball1MaxAmpUp = chartPositionBall1;
+					ball1Chart.axisY[0].stripLines[0].set("value",ball1MaxAmpUp, false);
+					ball1Chart.axisY[0].stripLines[0].set("label","Max Amplitude: +" + Math.round(ball1MaxAmpUp) + " cm", false);
+				}
+				else if(chartPositionBall1 < 0 && chartPositionBall1 < ball1MaxAmpDown)
+				{
+					ball1MaxAmpDown = chartPositionBall1;
+					ball1Chart.axisY[0].stripLines[1].set("value",ball1MaxAmpDown, false);
+					ball1Chart.axisY[0].stripLines[1].set("label","Max Amplitude: " + Math.round(ball1MaxAmpDown) + " cm", false);
+				}
+				if(chartPositionBall2 > 0 && chartPositionBall2 > ball2MaxAmpUp)
+				{
+					ball2MaxAmpUp = chartPositionBall2;
+					ball2Chart.axisY[0].stripLines[0].set("value",ball2MaxAmpUp, false);
+					ball2Chart.axisY[0].stripLines[0].set("label","Max Amplitude: +" + Math.round(ball2MaxAmpUp) + " cm", false);
+				}
+				else if(chartPositionBall2 < 0 && chartPositionBall2 < ball2MaxAmpDown)
+				{
+					ball2MaxAmpDown = chartPositionBall2;
+					ball2Chart.axisY[0].stripLines[1].set("value",ball2MaxAmpDown, false);
+					ball2Chart.axisY[0].stripLines[1].set("label","Max Amplitude: " + Math.round(ball2MaxAmpDown) + " cm", false);
+				}
+			}
+		}
+
+		//Clear screen and draw springs and balls
+		ctx.clearRect(0,0, canvas.width, canvas.height);
+			
+		spring1.draw(ball1.position-ballRadius); //Bottom position of spring1 is always ball1-ballRadius
+		spring2.draw(ball2.position-ballRadius); //Bottom position of spring2 is always ball2-ballRadius
+
+		ball1.draw();
+		ball2.draw();
+		
+		//If mouse is clicked over a ball and then dragged, draw path user is pulling ball down/up
+		if(mouse.isDown && mouse.overBall == 1)
+		{
+			ctx.beginPath();
+			ctx.moveTo(xPosition, ball1.position);
+			ctx.lineTo(xPosition, mouse.y);
+			ctx.stroke();
+			ctx.closePath();
+		}
+		else if(mouse.isDown && mouse.overBall == 2)
+		{
+			ctx.beginPath();
+			ctx.moveTo(xPosition, ball2.position);
+			ctx.lineTo(xPosition, mouse.y);
+			ctx.stroke();
+			ctx.closePath();
+		}
+
+		//Render Position Plots
+		ball1Chart.render();
+		ball2Chart.render();
+	}
+
+	//Simulate spring-ball system by executing simulateSystem function every frameDelay milliseconds
+	setInterval(simulateSystem, frameDelay);
+
+	//Ball 1 Chart Setup
+	var ball1Chart = new CanvasJS.Chart("ball1Chart",
+	{
+		
+		title:
+		{
+			text: "Ball 1 Position"
+		},
+		data:
+		[
+		{
+			type: "line",
+			dataPoints: ball1Position
+		}
+		],
+
+		axisX:
+		{
+     		title: "Time (s)",
+     		suffix: " s",
+   		},
+
+		axisY:
+		{
+     		title: "Displacement from Equilbrium (cm)",
+     		suffix: " cm",
+     		stripLines:
+     		[
+     			{
+     				label: "Max Amplitude: +" + ball1MaxAmpUp + " cm",
+     				labelPlacement: "inside",
+     				labelAlign: "far",
+     				labelBackgroundColor: "blue",
+     				labelFontColor: "white",
+     				value: ball1MaxAmpUp,
+     				color:"blue",			
+     				lineDashType: "dash",
+     				thickness: 2
+     			},
+				{
+     				label: "Max Amplitude: " + ball1MaxAmpDown + " cm",
+     				labelPlacement: "inside",
+     				labelAlign: "far",
+     				labelBackgroundColor: "blue",
+     				labelFontColor: "white",
+     				value: ball1MaxAmpDown,
+     				color:"blue",			
+     				lineDashType: "dash",
+     				thickness: 2
+     			}
+
+     		]
+   		},
+   		zoomEnabled: true
+	}
+	);
+
+	//Ball 2 Chart Setup
+	var ball2Chart = new CanvasJS.Chart("ball2Chart",
+	{
+		title:
+		{
+			text: "Ball 2 Position"
+		},
+		data:
+		[
+		{
+			type: "line",
+			dataPoints: ball2Position
+		}
+		],
+
+		axisX:
+		{
+     		title: "Time (s)",
+     		suffix: " s",
+   		},
+		
+		axisY:
+		{
+     		title: "Displacement from Equilbrium (cm)",
+     		suffix: " cm",
+     		stripLines:
+     		[
+     			{
+     				label: "Max Amplitude: +" + ball2MaxAmpUp + " cm",
+     				labelPlacement: "inside",
+     				labelAlign: "far",
+     				labelBackgroundColor: "blue",
+     				labelFontColor: "white",
+     				value: ball2MaxAmpUp,
+     				color:"blue",			
+     				lineDashType: "dash",
+     				thickness: 2
+     			},
+				{
+     				label: "Max Amplitude: " + ball2MaxAmpDown + " cm",
+     				labelPlacement: "inside",
+     				labelAlign: "far",
+     				labelBackgroundColor: "blue",
+     				labelFontColor: "white",
+     				value: ball2MaxAmpDown,
+     				color:"blue",			
+     				lineDashType: "dash",
+     				thickness: 2
+     			}
+
+     		]
+   		},
+   		zoomEnabled: true
+
+	});
+	
+</script>
+</body>
+</html>
